@@ -63,6 +63,16 @@ if (user) {
       phone: formData.phone,
       city: formData.city,
     });
+    const { error: profileError } = await supabase
+  .from("profiles")
+  .insert({
+    id: user.id,
+    role: "normal",
+  });
+
+if (profileError) {
+  console.error(profileError);
+}
 
   if (insertError) {
   console.error("Insert Error:", insertError);

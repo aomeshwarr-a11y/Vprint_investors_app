@@ -1,28 +1,56 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { HiMenuAlt3, HiX, HiUserCircle, HiLogout, HiCreditCard, HiCollection } from "react-icons/hi";
+import { supabase } from "../supabase";
 
 function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Check login state from localStorage
-  useEffect(() => {
-    const isLoggedInValue = localStorage.getItem("isLoggedIn") === "true";
-    const userNameValue = localStorage.getItem("userName");
+  
 
-    if (isLoggedInValue && userNameValue) {
+useEffect(() => {
+  const getUser = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
       setIsLoggedIn(true);
-      setUserName(userNameValue);
+      setUserName(
+        session.user.user_metadata?.full_name ||
+        session.user.email
+      );
     } else {
       setIsLoggedIn(false);
       setUserName("");
     }
-  }, []);
+  };
+
+  getUser();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      setIsLoggedIn(true);
+      setUserName(
+        session.user.user_metadata?.full_name ||
+        session.user.email
+      );
+    } else {
+      setIsLoggedIn(false);
+      setUserName("");
+    }
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,15 +65,15 @@ function Navbar() {
 
   const closeMobileMenu = () => setShowMobileMenu(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    setIsLoggedIn(false);
-    setUserName("");
-    navigate("/");
-    closeMobileMenu();
-  };
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+
+  setIsLoggedIn(false);
+  setUserName("");
+
+  navigate("/");
+  closeMobileMenu();
+};
 
   return (
     <nav className="navbar">

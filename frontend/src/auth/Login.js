@@ -40,78 +40,41 @@ function Login() {
     if (error) throw error;
 
     const user = data.user;
+    console.log("Auth User ID:", user.id);
 
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem(
-      "userName",
-      user.user_metadata?.full_name ||
-        user.email ||
-        "User"
-    );
+  const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .maybeSingle();
 
-    navigate("/");
+if (profileError) {
+  throw profileError;
+}
+
+if (!profile) {
+  setError("User profile not found. Contact admin.");
+  return;
+}
+
+    if (profile.role === "premium") {
+  window.location.href = "http://localhost:5173";
+} else {
+  navigate("/");
+}
   } catch (err) {
-    console.error(err);
+  console.error(err);
 
-    if (
-      err.message.includes("Invalid login credentials")
-    ) {
-      setError("Invalid email or password");
-    } else {
-      setError(err.message);
-    }
-
-    setLoading(true);
-    try {
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const user = users.find(
-        u => u.email === loginData.email && u.password === loginData.password
-      );
-
-      if (!user) {
-        setError("Invalid email or password.");
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userName", user.name);
-      localStorage.setItem("userEmail", user.email);
-
-      navigate("/");
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Failed to log in. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  };
-  const handleLogin = async () => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  // Get role from profiles table
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .single();
-
-  if (profile.role === "premium") {
-    navigate("/dashboard");
+  if (err.message.includes("Invalid login credentials")) {
+    setError("Invalid email or password");
   } else {
-    navigate("/");
+    setError(err.message);
   }
-};
+} finally {
+  setLoading(false);
+}
+  };
+  
 
   return (
     <div className="auth-page">
